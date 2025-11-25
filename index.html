@@ -1,622 +1,76 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Análise Estratégica Proprietária</title>
-    <!-- Carrega Tailwind CSS para estilização e responsividade -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    fontFamily: {
-                        sans: ['Inter', 'sans-serif'],
-                    },
-                    colors: {
-                        'primary-blue': '#1e40af',
-                        'secondary-gray': '#f3f4f6',
-                        'analysis-bg': '#e5e7eb',
-                        'user-bubble': '#dbeafe', /* light blue */
-                        'ai-bubble': '#ffffff', /* white */
-                    }
-                }
-            }
-        }
-    </script>
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap');
-        
-        /* Custom styles for the report */
-        #analysisResult h3, #chatMessages h3 {
-            font-size: 1.5rem;
-            font-weight: 600;
-            margin-top: 1.5rem;
-            padding-bottom: 0.5rem;
-            border-bottom: 2px solid #1e40af;
-            color: #1e40af;
-        }
-        #analysisResult p, #analysisResult ul, #chatMessages p, #chatMessages ul {
-            margin-bottom: 1rem;
-            line-height: 1.6;
-        }
-        #analysisResult ul, #chatMessages ul {
-            list-style: disc;
-            padding-left: 1.5rem;
-        }
-
-        .input-label {
-            display: block;
-            font-weight: 600;
-            margin-bottom: 0.5rem;
-            color: #1f2937;
-        }
-
-        .textarea-input {
-            width: 100%;
-            padding: 1rem;
-            border: 1px solid #d1d5db;
-            border-radius: 0.5rem;
-            resize: vertical;
-            min-height: 150px;
-            box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.06);
-        }
-        
-        /* Chat bubble styles */
-        .chat-bubble {
-            padding: 0.75rem;
-            border-radius: 1rem;
-            margin-bottom: 0.75rem;
-            max-width: 90%;
-            word-wrap: break-word;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.08);
-        }
-        .user-message {
-            background-color: #dbeafe; /* light blue */
-            margin-left: auto;
-        }
-        .ai-message {
-            background-color: #ffffff; /* white */
-            margin-right: auto;
-            border: 1px solid #e5e7eb;
-        }
-        #chatMessages {
-            max-height: 400px;
-            overflow-y: auto;
-            border: 1px solid #e5e7eb;
-            padding: 1rem;
-            background-color: #f9fafb;
-            border-radius: 0.5rem;
-        }
-
-        /* Print styles: hide unnecessary UI elements */
-        @media print {
-            header, .grid.md\:grid-cols-2, .text-center.mb-10, #authStatus, #errorDisplay, #printButton, #chatContainer {
-                display: none !important;
-            }
-            #analysisContainer {
-                padding-top: 0 !important;
-                border-top: none !important;
-            }
-            #analysisResult {
-                background-color: white !important;
-                box-shadow: none !important;
-                padding: 0 !important;
-            }
-            body {
-                background-color: white !important;
-            }
-        }
-    </style>
-</head>
-<body class="bg-secondary-gray min-h-screen p-4 sm:p-8 font-sans">
-
-    <div id="appContainer" class="max-w-4xl mx-auto bg-white p-6 sm:p-10 rounded-xl shadow-2xl">
-        <header class="text-center mb-10">
-            <!-- VERSÃO ATUALIZADA PARA V2.0 -->
-            <h1 class="text-3xl sm:text-4xl font-extrabold text-primary-blue mb-2">Hydra Analytics</h1>
-            <p class="text-gray-600">IA Preditiva Analítica V2.0 - Ronnie Girardi</p>
-        </header>
-
-        <!-- Input Areas -->
-        <div class="grid md:grid-cols-2 gap-8 mb-8">
-            <!-- 1. INPUT DADOS (Regras Proprietárias) -->
-            <div class="p-4 bg-yellow-50 border-l-4 border-yellow-500 rounded-lg shadow-md">
-                <label for="proprietaryDirectives" class="input-label text-yellow-700">
-                    1. INPUT DADOS (Regras Proprietárias)
-                </label>
-                <input type="file" id="proprietaryFileUpload" accept=".txt,.pdf,.docx,.xlsx,.doc" multiple class="mb-2 block w-full text-sm text-gray-900 border border-gray-300 rounded-lg cursor-pointer bg-gray-50 focus:outline-none">
-                <p class="text-xs text-yellow-600 mb-2 font-semibold">
-                    Atenção: Apenas arquivos **.TXT** serão lidos automaticamente. Para PDF/Word/Excel, copie o conteúdo e cole no campo abaixo.
-                </p>
-                <textarea id="proprietaryDirectives" class="textarea-input bg-yellow-100" placeholder="Cole o conteúdo proprietário aqui (ou ele será preenchido após o upload do(s) arquivo(s) TXT)."></textarea>
-            </div>
-
-            <!-- 2. Dados do Cliente (DRE/Conversa) -->
-            <div class="p-4 bg-blue-50 border-l-4 border-blue-500 rounded-lg shadow-md">
-                <label for="clientData" class="input-label text-blue-700">
-                    2. Dados transcritivos para Outputs
-                </label>
-                <p class="text-sm text-blue-600 mb-2">Cole aqui o conteúdo textual (DRE, transcrição, etc.) para análise.</p>
-                <textarea id="clientData" class="textarea-input bg-blue-100" placeholder="Ex: Receita Operacional Líquida: 1.000.000. Custo dos Produtos Vendidos: 400.000... ou Transcrição: Cliente A disse que a lentidão era inaceitável."></textarea>
-            </div>
-        </div>
-
-        <!-- Action Button -->
-        <div class="text-center mb-10">
-            <button id="generateButton" onclick="generateAnalysis()" class="px-8 py-3 bg-primary-blue text-white font-bold rounded-full shadow-lg hover:bg-blue-700 transition duration-300 transform hover:scale-105 disabled:opacity-50">
-                GERAR ANÁLISE
-            </button>
-            <div id="loadingIndicator" class="mt-4 hidden text-primary-blue font-medium">
-                <div class="animate-spin inline-block w-5 h-5 border-4 border-t-transparent border-primary-blue rounded-full mr-2"></div>
-                Processando análise... (Isto pode demorar alguns segundos)
-            </div>
-            <p id="authStatus" class="mt-2 text-sm text-gray-500"></p>
-        </div>
-
-        <!-- Result Area -->
-        <div id="analysisContainer" class="mt-10 pt-8 border-t border-gray-200">
-            <h2 class="text-2xl font-bold text-gray-800 mb-6 border-b pb-2">Resultado da Análise</h2>
-            <div id="analysisResult" class="bg-analysis-bg p-6 rounded-lg min-h-[150px] shadow-inner text-gray-800">
-                <p class="text-gray-500" id="initialMessage">Aguardando a geração da análise...</p>
-            </div>
-            <div id="errorDisplay" class="hidden mt-4 p-4 bg-red-100 text-red-700 border border-red-400 rounded"></div>
-            
-            <!-- Export to PDF Button -->
-            <div class="text-center mt-6">
-                <button id="printButton" onclick="exportToPdf()" class="hidden px-8 py-3 bg-green-600 text-white font-bold rounded-full shadow-lg hover:bg-green-700 transition duration-300 transform hover:scale-105">
-                    IMPRIMIR / EXPORTAR PDF
-                </button>
-            </div>
-        </div>
-        
-        <!-- Interactive Chat -->
-        <div id="chatContainer" class="mt-10 pt-8 border-t border-gray-200 hidden">
-            <h2 class="text-2xl font-bold text-gray-800 mb-6 border-b pb-2">3. Chat Interativo (Aprofunde a Análise)</h2>
-            
-            <!-- Message Area -->
-            <div id="chatMessages" class="mb-4">
-                <!-- Messages will be injected here via JavaScript -->
-            </div>
-
-            <!-- Chat Input -->
-            <div class="flex space-x-2">
-                <textarea id="chatInput" rows="2" class="textarea-input p-3 flex-grow resize-none" placeholder="Pergunte sobre as recomendações, custos ou oportunidades..."></textarea>
-                <button id="chatSendButton" onclick="sendChatMessage()" class="w-24 bg-primary-blue text-white font-bold rounded-xl shadow-lg hover:bg-blue-700 transition duration-300 transform hover:scale-105 disabled:opacity-50 flex items-center justify-center">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
-                </button>
-            </div>
-            <div id="chatLoadingIndicator" class="mt-2 hidden text-primary-blue font-medium text-sm">
-                <div class="animate-spin inline-block w-4 h-4 border-2 border-t-transparent border-primary-blue rounded-full mr-1"></div>
-                IA pensando...
-            </div>
-        </div>
-
-    </div>
-
-    <!-- Firebase Imports (Auth is necessary for the environment, even if Firestore isn't used) -->
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-        
-        window.app = null;
-        window.db = null;
-        window.auth = null;
-        window.userId = null;
-        
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-        const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' && __firebase_config ? __firebase_config : '{}');
-        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
-
-        async function initializeFirebase() {
-            if (Object.keys(firebaseConfig).length === 0) {
-                document.getElementById('authStatus').textContent = "Aviso: Sem config do Firebase.";
-                return;
-            }
-
-            try {
-                window.app = initializeApp(firebaseConfig);
-                window.db = getFirestore(window.app);
-                window.auth = getAuth(window.app);
-                
-                let authMethod = "Anônima";
-
-                if (initialAuthToken) {
-                    await signInWithCustomToken(window.auth, initialAuthToken);
-                    authMethod = "Custom Token (Autenticado)";
-                } else {
-                    await signInAnonymously(window.auth);
-                }
-
-                onAuthStateChanged(window.auth, (user) => {
-                    if (user) {
-                        window.userId = user.uid;
-                        document.getElementById('authStatus').textContent = `Conectado (ID: ${window.userId.substring(0, 8)}...) via ${authMethod}.`;
-                    } else {
-                        document.getElementById('authStatus').textContent = "Desconectado. Tentando login anônimo...";
-                    }
-                });
-
-            } catch (error) {
-                console.error("Erro ao inicializar ou autenticar no Firebase:", error);
-                document.getElementById('authStatus').textContent = `Erro de Autenticação: ${error.message}`;
-            }
-        }
-
-        window.onload = initializeFirebase;
-    </script>
-
-    <!-- Application JavaScript and AI Logic -->
-    <script>
-        // API Key (The user's key is inserted here for the GitHub Pages deployment)
-const GEMINI_API_KEY = "AIzaSyCMGncKplN_RVMkGMHlnwiVyEl896Lqahg"; 
-        
-        // UPGRADE PARA A VERSÃO PRO (Última Geração de Inteligência)
-// Corrigido o nome do modelo para 'gemini-2.5-pro' (versão estável) e removido o modelo preview expirado.
-const API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent";
-const MAX_RETRIES = 5;
-
-        // Global variables for chat context
-        let chatHistory = []; 
-        let currentSystemPrompt = ""; 
-
-        // Exponential backoff function for API calls
-        async function fetchWithBackoff(url, options) {
-            let retries = 0;
-            while (retries < MAX_RETRIES) {
-                try {
-                    const response = await fetch(url, options);
-                    
-                    if (response.status === 429) {
-                        retries++;
-                        const delay = Math.pow(2, retries) * 1000 + Math.random() * 1000;
-                        console.warn(`Taxa limite atingida. Tentando novamente em ${Math.round(delay / 1000)}s...`);
-                        await new Promise(resolve => setTimeout(resolve, delay));
-                        continue; // Retry request
-                    }
-
-                    if (!response.ok) {
-                        const errorBody = await response.json().catch(() => ({}));
-                        const errorMessage = errorBody.error?.message || response.statusText;
-                        throw new Error(`Erro HTTP: ${response.status} - ${errorMessage}`);
-                    }
-
-                    return response.json();
-                } catch (error) {
-                    retries++;
-                    if (retries >= MAX_RETRIES) {
-                        throw new Error(`Falha na requisição da API após ${MAX_RETRIES} tentativas: ${error.message}`);
-                    }
-                    const delay = Math.pow(2, retries) * 1000 + Math.random() * 1000;
-                    console.warn(`Erro na requisição. Tentando novamente em ${Math.round(delay / 1000)}s...`, error);
-                    await new Promise(resolve => setTimeout(resolve, delay));
-                }
-            }
-        }
-
-        /**
-         * Builds the Master Prompt, injecting proprietary directives and client data.
-         */
-        function buildMasterPrompt(proprietaryDirectives, clientData) {
-            const defaultDirectives = "Sua análise deve ser estruturada. Use Markdown para formatar o resultado. Use tabelas se necessário para resumir os dados e foque em recomendações acionáveis. Não mencione o NotebookLM ou qualquer fonte externa.";
-            
-            // The Master Prompt Template (adapted from our discussion)
-            const masterPromptTemplate = `
-                **Instrução Principal:** Você é um Analista Estratégico de Elite e atua como o motor proprietário de insights de uma consultoria de alto nível. Sua tarefa é analisar os dados do cliente fornecidos abaixo e gerar um relatório focado em estratégia e crescimento.
-
-                ### 1. Diretrizes Proprietárias (Base de Conhecimento Secreta)
-
-                CRÍTICO: Sua análise deve incorporar e priorizar os seguintes frameworks e diretrizes de análise de ponta:
-
-                ${proprietaryDirectives || defaultDirectives}
-
-                ### 2. Análise Técnica Padrão
-
-                Execute as seguintes análises técnicas nos dados do cliente:
-                * **Análise de Desempenho:** Se for um DRE, avalie a Margem Bruta, Margem Operacional (EBIT) e Margem Líquida. Se for uma transcrição, analise o sentimento (positivo, neutro, negativo) e o tópico principal (dor/reclamação).
-                * **Variação:** Identifique os pontos de maior alavancagem de custo/receita ou os pontos mais críticos/recorrentes nas conversas.
-
-                ### 3. Estrutura do Relatório de Saída
-
-                O relatório final deve ser entregue em **Português do Brasil**, claro, conciso e com foco estratégico. Use títulos Markdown (###) e listas de tópicos onde apropriado.
-
-                #### Relatório Executivo
-                1.  **Diagnóstico Rápido:** Resumo de 3 frases sobre a Saúde do Negócio/Sentimento (aplicado às suas diretrizes proprietárias).
-                2.  **Análise Crítica e Ponto Ápice:** Destaque três pontos críticos ou oportunidades que foram descobertos pela aplicação das suas Diretrizes Proprietárias.
-
-                #### Análise Detalhada
-                1.  **Destaques de Crescimento/Oportunidades:** Onde o cliente está forte ou onde há potencial de melhoria.
-                2.  **Pressões de Custo/Risco:** Onde a rentabilidade ou satisfação do cliente está sendo mais erodida.
-                3.  **Rentabilidade/Retorno:** Interpretação dos indicadores chave.
-
-                #### Recomendações Estratégicas
-                * Ofereça 3 a 5 ações acionáveis e estratégicas.
-
-                ---
-                **Dados do Cliente para Análise:**
-                ${clientData}
-                ---
-            `;
-            return masterPromptTemplate;
-        }
-
-        /**
-         * Adds a message to the chat and scrolls to the end.
-         */
-        function displayChatMessage(role, content, isHtml = false) {
-            const chatMessagesDiv = document.getElementById('chatMessages');
-            const messageDiv = document.createElement('div');
-            
-            messageDiv.className = `chat-bubble ${role === 'user' ? 'user-message' : 'ai-message'}`;
-            
-            if (isHtml) {
-                messageDiv.innerHTML = content;
-            } else {
-                messageDiv.innerHTML = marked.parse(content);
-            }
-            
-            chatMessagesDiv.appendChild(messageDiv);
-            chatMessagesDiv.scrollTop = chatMessagesDiv.scrollHeight; // Scrolls to the end
-        }
-
-        /**
-         * Exports the analysis result to a PDF file using html2pdf.js.
-         */
-        function exportToPdf() {
-            const element = document.getElementById('analysisContainer');
-            
-            // Configuration for html2pdf
-            const opt = {
-                margin: 10,
-                filename: 'Relatorio_Hydra_Analytics.pdf',
-                image: { type: 'jpeg', quality: 0.98 },
-                html2canvas: { scale: 2, logging: false },
-                jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
-            };
-
-            // Use the print styles (hidden chat) for the PDF generation
-            html2pdf().set(opt).from(element).save();
-        }
-
-        /**
-         * Main function to generate the analysis upon button click.
-         */
-        async function generateAnalysis() {
-            const directives = document.getElementById('proprietaryDirectives').value.trim();
-            const clientData = document.getElementById('clientData').value.trim();
-            const resultDiv = document.getElementById('analysisResult');
-            const button = document.getElementById('generateButton');
-            const loadingIndicator = document.getElementById('loadingIndicator');
-            const errorDisplay = document.getElementById('errorDisplay');
-            const initialMessage = document.getElementById('initialMessage');
-            const printButton = document.getElementById('printButton'); 
-            const chatContainer = document.getElementById('chatContainer');
-            const chatMessagesDiv = document.getElementById('chatMessages');
-
-            errorDisplay.classList.add('hidden');
-            errorDisplay.textContent = '';
-            printButton.classList.add('hidden'); 
-            chatContainer.classList.add('hidden'); // Hide chat at start
-
-            if (!API_KEY || API_KEY === "") {
-                errorDisplay.textContent = "Erro de Configuração: A chave da API Gemini não foi inserida no código. Por favor, edite o index.html e insira sua chave pessoal.";
-                errorDisplay.classList.remove('hidden');
-                return;
-            }
-
-            if (!clientData) {
-                errorDisplay.textContent = 'Por favor, cole os Dados do Cliente (DRE ou Transcrição) para análise.';
-                errorDisplay.classList.remove('hidden');
-                return;
-            }
-
-            button.disabled = true;
-            initialMessage.classList.add('hidden');
-            resultDiv.innerHTML = '';
-            chatMessagesDiv.innerHTML = ''; // Clear previous chat history
-            loadingIndicator.classList.remove('hidden');
-            
-            // Build the Master Prompt (which will also serve as the system prompt for the chat)
-            currentSystemPrompt = `Você é um Analista Estratégico de Elite da Hydra Analytics. Seu objetivo é analisar dados de clientes. Para TODAS as interações subsequentes (chat), o contexto principal e as regras a seguir são:
-            
-            ### Diretrizes Proprietárias (Regras)
-            ${directives || "Nenhuma diretriz proprietária fornecida."}
-
-            ### Dados do Cliente (Contexto)
-            ${clientData}
-
-            Sempre que questionado no chat, use este contexto para dar respostas estratégicas e focadas, em Português do Brasil.`;
-
-            const fullPrompt = buildMasterPrompt(directives, clientData);
-            
-            const payload = {
-                contents: [{ parts: [{ text: fullPrompt }] }],
-            };
-
-            const url = `${API_URL}?key=${API_KEY}`;
-            
-            try {
-                const result = await fetchWithBackoff(url, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
-
-                const candidate = result.candidates?.[0];
-
-                if (candidate && candidate.content?.parts?.[0]?.text) {
-                    const text = candidate.content.parts[0].text;
-                    
-                    // 1. Display Main Report
-                    resultDiv.innerHTML = marked.parse(text); 
-                    // ATUALIZAÇÃO DA VERSÃO PARA V2.0 NO FOOTER
-                    resultDiv.innerHTML += '<p class="mt-4 pt-2 border-t border-gray-300 text-sm text-gray-700 font-semibold">DOCUMENTO GERADO PELA IA HYDRA ANALYTICS V2.0</p>';
-                    
-                    // 2. Initialize Chat History
-                    chatHistory = [
-                        { role: "user", parts: [{ text: fullPrompt }] }, // The initial full prompt
-                        { role: "model", parts: [{ text: text }] }       // The full report response
-                    ];
-
-                    // 3. Configure Post-Analysis Interface
-                    printButton.classList.remove('hidden'); 
-                    chatContainer.classList.remove('hidden');
-                    
-                    // Welcome message in the chat
-                    displayChatMessage('model', 'Olá! O relatório principal foi gerado com sucesso. Como Analista Estratégico da Hydra Analytics, estou à disposição para aprofundar qualquer ponto do DRE ou das Recomendações. O que gostaria de explorar em seguida?', false);
-
-
-                } else {
-                    throw new Error("A API não retornou conteúdo válido. Verifique a chave da API e os dados de entrada.");
-                }
-
-            } catch (error) {
-                console.error("Erro durante a geração da análise:", error);
-                errorDisplay.textContent = `Erro ao gerar a análise: ${error.message}. Tente novamente e verifique o formato dos dados.`;
-                errorDisplay.classList.remove('hidden');
-            } finally {
-                button.disabled = false;
-                loadingIndicator.classList.add('hidden');
-            }
-        }
-
-        /**
-         * Sends a new chat message, using the analysis context.
-         */
-        async function sendChatMessage() {
-            const chatInput = document.getElementById('chatInput');
-            const chatSendButton = document.getElementById('chatSendButton');
-            const chatLoadingIndicator = document.getElementById('chatLoadingIndicator');
-            const query = chatInput.value.trim();
-
-            if (!query) return;
-
-            // 1. Display user message
-            displayChatMessage('user', query, false);
-            chatHistory.push({ role: "user", parts: [{ text: query }] });
-            chatInput.value = '';
-
-            // 2. Set loading state
-            chatSendButton.disabled = true;
-            chatLoadingIndicator.classList.remove('hidden');
-
-            // 3. Prepare API call (using history)
-            const chatPayload = {
-                contents: chatHistory,
-                // System Instruction is the primary context (proprietary rules + client data)
-                systemInstruction: {
-                    parts: [{ text: currentSystemPrompt }]
-                }
-            };
-
-            const url = `${API_URL}?key=${API_KEY}`;
-            
-            try {
-                const result = await fetchWithBackoff(url, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(chatPayload)
-                });
-
-                const candidate = result.candidates?.[0];
-
-                if (candidate && candidate.content?.parts?.[0]?.text) {
-                    const responseText = candidate.content.parts[0].text;
-                    
-                    // 4. Display model response
-                    displayChatMessage('model', responseText, false);
-                    
-                    // 5. Add response to history
-                    chatHistory.push({ role: "model", parts: [{ text: responseText }] });
-
-                } else {
-                    throw new Error("A API de chat não retornou uma resposta válida.");
-                }
-
-            } catch (error) {
-                console.error("Erro durante a interação no chat:", error);
-                displayChatMessage('model', `Desculpe, ocorreu um erro na comunicação com o motor de análise: ${error.message}. Por favor, tente novamente.`, false);
-            } finally {
-                chatSendButton.disabled = false;
-                chatLoadingIndicator.classList.add('hidden');
-            }
-        }
-
-        // --- Logic for Reading Multiple TXT Files ---
-        document.addEventListener('DOMContentLoaded', () => {
-            const fileInput = document.getElementById('proprietaryFileUpload');
-            const textarea = document.getElementById('proprietaryDirectives');
-            const chatInput = document.getElementById('chatInput');
-
-            // Enable sending message by pressing Enter in the chat field
-            if (chatInput) {
-                chatInput.addEventListener('keydown', (e) => {
-                    if (e.key === 'Enter' && !e.shiftKey) {
-                        e.preventDefault();
-                        sendChatMessage();
-                    }
-                });
-            }
-
-
-            if (fileInput) {
-                fileInput.addEventListener('change', (event) => {
-                    const files = event.target.files;
-                    if (files.length === 0) return;
-
-                    // JavaScript in the browser will only attempt to read .TXT files
-                    const validFiles = Array.from(files).filter(file => file.type === 'text/plain' || file.name.toLowerCase().endsWith('.txt'));
-                    
-                    const promises = validFiles.map(file => {
-                        return new Promise((resolve, reject) => {
-                            const reader = new FileReader();
-                            reader.onload = (e) => {
-                                resolve({ filename: file.name, content: e.target.result });
-                            };
-                            reader.onerror = reject;
-                            reader.readAsText(file);
-                        });
-                    });
-
-                    // Check and display warning for invalid files
-                    const invalidCount = files.length - validFiles.length;
-                    const errorDisplay = document.getElementById('errorDisplay');
-                    if (invalidCount > 0) {
-                        errorDisplay.textContent = `Aviso: ${invalidCount} arquivo(s) não puderam ser lidos automaticamente (apenas .TXT são suportados diretamente). Copie o conteúdo para a caixa de texto.`;
-                        errorDisplay.classList.remove('hidden');
-                    } else {
-                        errorDisplay.classList.add('hidden');
-                    }
-                    
-                    if (validFiles.length === 0) return;
-                    
-                    Promise.all(promises)
-                        .then(results => {
-                            let combinedContent = '';
-                            results.forEach(result => {
-                                combinedContent += `\n\n--- INÍCIO DO ARQUIVO: ${result.filename} ---\n\n`;
-                                combinedContent += result.content.trim();
-                                combinedContent += `\n\n--- FIM DO ARQUIVO: ${result.filename} ---\n\n`;
-                            });
-                            textarea.value = combinedContent.trim();
-                            console.log('Arquivos de diretrizes (.txt) carregados e combinados com sucesso!');
-                        })
-                        .catch(error => {
-                            console.error('Erro ao ler os arquivos de diretrizes:', error);
-                            errorDisplay.textContent = 'Erro ao ler um ou mais arquivos de diretrizes.';
-                            errorDisplay.classList.remove('hidden');
-                        });
-                });
-            }
-        });
-
-    </script>
-    <!-- Imports marked.js to convert Markdown (AI return) to HTML -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.0/marked.min.js"></script>
-    <!-- Imports html2pdf.js for direct PDF export -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
-</body>
-
-</html>
-
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Análise Estratégica Proprietária</title>
+        <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        'primary-blue': '#1e40af',
+                        'secondary-gray': '#f3f4f6',
+                        'analysis-bg': '#e5e7eb',
+                        'user-bubble': '#dbeafe', /* light blue */
+                        'ai-bubble': '#ffffff', /* white */
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap');
+        
+        /* Custom styles for the report */
+        #analysisResult h3, #chatMessages h3 {
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-top: 1.5rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid #1e40af;
+            color: #1e40af;
+        }
+        #analysisResult p, #analysisResult ul, #chatMessages p, #chatMessages ul {
+            margin-bottom: 1rem;
+            line-height: 1.6;
+        }
+        #analysisResult ul, #chatMessages ul {
+            list-style: disc;
+            padding-left: 1.5rem;
+        }
+
+        .input-label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            color: #1f2937;
+        }
+
+        .textarea-input {
+            width: 100%;
+            padding: 1rem;
+            border: 1px solid #d1d5db;
+            border-radius: 0.5rem;
+            resize: vertical;
+            min-height: 150px;
+            box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.06);
+        }
+        
+        /* Chat bubble styles */
+        .chat-bubble {
+            padding: 0.75rem;
+            border-radius: 1rem;
+            margin-bottom: 0.75rem;
+            max-width: 90%;
+            word-wrap: break-word;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+        }
+        .user-message {
+            background-color: #dbeafe; /* light blue */
+            margin-left: auto;
+        }
