@@ -253,8 +253,8 @@
 const GEMINI_API_KEY = "AIzaSyDbYVQM6Re6Ity2lomgLtQwt3jLTIxo4oQ"; 
         
         // UPGRADE PARA A VERSÃO PRO (Última Geração de Inteligência)
-// Corrigido o nome do modelo para 'gemini-2.5-pro' (versão estável) e removido o modelo preview expirado.
-const API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent";
+// Corrigido o nome do modelo para 'gemini-FLASH' (versão estável) e removido o modelo preview expirado.
+const API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent";
 const MAX_RETRIES = 5;
 
         // Global variables for chat context
@@ -262,13 +262,18 @@ const MAX_RETRIES = 5;
         let currentSystemPrompt = ""; 
 
         // Exponential backoff function for API calls
-        async function fetchWithBackoff(url, options) {
-            let retries = 0;
-            while (retries < MAX_RETRIES) {
-                try {
-                    const response = await fetch(url, options);
-                    
-                    if (response.status === 429) {
+     async function fetchWithBackoff(uri, options) {
+    let retries = 0;
+    
+    // CORREÇÃO ESSENCIAL PARA O ERRO 400: Anexar a chave de API à URI
+    const uriWithKey = uri + "?key=" + GEMINI_API_KEY; 
+
+    while (retries < MAX_RETRIES) {
+        try {
+            // AGORA USAMOS A URI CORRIGIDA COM A CHAVE!
+            const response = await fetch(uriWithKey, options); 
+
+            if (response.status === 429) {
                         retries++;
                         const delay = Math.pow(2, retries) * 1000 + Math.random() * 1000;
                         console.warn(`Taxa limite atingida. Tentando novamente em ${Math.round(delay / 1000)}s...`);
@@ -619,5 +624,6 @@ const MAX_RETRIES = 5;
 </body>
 
 </html>
+
 
 
