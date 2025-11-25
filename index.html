@@ -250,11 +250,12 @@
     <!-- Application JavaScript and AI Logic -->
     <script>
         // API Key (The user's key is inserted here for the GitHub Pages deployment)
-        const API_KEY = "AIzaSyCMGncKplN_RVMkGMHlnwiVyEl896Lqahg"; 
+const GEMINI_API_KEY = "AIzaSyCMGncKplN_RVMkGMHlnwiVyEl896Lqahg"; 
         
         // UPGRADE PARA A VERSÃO PRO (Última Geração de Inteligência)
-        const API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent"; 
-        const MAX_RETRIES = 5;
+// Corrigido o nome do modelo para 'gemini-2.5-pro' (versão estável) e removido o modelo preview expirado.
+const API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent";
+const MAX_RETRIES = 5;
 
         // Global variables for chat context
         let chatHistory = []; 
@@ -618,4 +619,5 @@
 </body>
 
 </html>
+
 
