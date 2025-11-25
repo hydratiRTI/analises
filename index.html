@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Análise Estratégica Proprietária</title>
+    <!-- Carrega Tailwind CSS para estilização e responsividade -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        'primary-blue': '#1e40af',
+                        'secondary-gray': '#f3f4f6',
+                        'analysis-bg': '#e5e7eb',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap');
+        
+        /* Estilos personalizados para o relatório */
+        #analysisResult h3 {
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-top: 1.5rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid #1e40af;
+            color: #1e40af;
+        }
+        #analysisResult p, #analysisResult ul {
+            margin-bottom: 1rem;
+            line-height: 1.6;
+        }
+        #analysisResult ul {
+            list-style: disc;
+            padding-left: 1.5rem;
+        }
+
+        .input-label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            color: #1f2937;
+        }
+
+        .textarea-input {
+            width: 100%;
+            padding: 1rem;
+            border: 1px solid #d1d5db;
+            border-radius: 0.5rem;
+            resize: vertical;
+            min-height: 150px;
+            box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.06);
+        }
+        
+        /* Estilos de impressão: esconde elementos de UI desnecessários */
+        @media print {
+            header, .grid.md\:grid-cols-2, .text-center.mb-10, #authStatus, #errorDisplay, #printButton {
+                display: none !important;
+            }
+            #analysisContainer {
+                padding-top: 0 !important;
+                border-top: none !important;
+            }
+            #analysisResult {
+                background-color: white !important;
+                box-shadow: none !important;
+                padding: 0 !important;
+            }
+            body {
+                background-color: white !important;
+            }
+        }
+    </style>
+</head>
+<body class="bg-secondary-gray min-h-screen p-4 sm:p-8 font-sans">
+
+    <div id="appContainer" class="max-w-4xl mx-auto bg-white p-6 sm:p-10 rounded-xl shadow-2xl">
+        <header class="text-center mb-10">
+            <!-- ALTERAÇÃO 1: Rebranding do Título -->
+            <h1 class="text-3xl sm:text-4xl font-extrabold text-primary-blue mb-2">Hydra Analytics</h1>
+            <!-- CORREÇÃO 1: Analitíca -> Analítica -->
+            <p class="text-gray-600">IA Preditiva Analítica V1.3.6 - Ronnie Girardi</p>
+        </header>
+
+        <!-- Área de Entradas -->
+        <div class="grid md:grid-cols-2 gap-8 mb-8">
+            <!-- 1. INPUT DADOS (Regras Proprietárias) - Antigo 'Pulo do Gato' -->
+            <div class="p-4 bg-yellow-50 border-l-4 border-yellow-500 rounded-lg shadow-md">
+                <label for="proprietaryDirectives" class="input-label text-yellow-700">
+                    1. INPUT DADOS (Regras Proprietárias)
+                </label>
+                <!-- ALTERAÇÃO CRÍTICA: Adição do atributo 'multiple' -->
+                <input type="file" id="proprietaryFileUpload" accept=".txt" multiple class="mb-4 block w-full text-sm text-gray-900 border border-gray-300 rounded-lg cursor-pointer bg-gray-50 focus:outline-none">
+                <textarea id="proprietaryDirectives" class="textarea-input bg-yellow-100" placeholder="Cole o conteúdo proprietário aqui (ou ele será preenchido após o upload do(s) arquivo(s) TXT)."></textarea>
+            </div>
+
+            <!-- 2. Dados do Cliente (DRE/Conversa) -->
+            <div class="p-4 bg-blue-50 border-l-4 border-blue-500 rounded-lg shadow-md">
+                <!-- ALTERAÇÃO 3 e 6: Mudança de rótulo para 'Dados transcritivos para Outputs' -->
+                <label for="clientData" class="input-label text-blue-700">
+                    2. Dados transcritivos para Outputs
+                </label>
+                <p class="text-sm text-blue-600 mb-2">Cole aqui o conteúdo textual (DRE, transcrição, etc.) para análise.</p>
+                <textarea id="clientData" class="textarea-input bg-blue-100" placeholder="Ex: Receita Operacional Líquida: 1.000.000. Custo dos Produtos Vendidos: 400.000... ou Transcrição: Cliente A disse que a lentidão era inaceitável."></textarea>
+            </div>
+        </div>
+
+        <!-- Botão de Ação -->
+        <div class="text-center mb-10">
+            <!-- CORREÇÃO 2 e ALTERAÇÃO 7: GERA ANÁLISE -> GERAR ANÁLISE -->
+            <button id="generateButton" onclick="generateAnalysis()" class="px-8 py-3 bg-primary-blue text-white font-bold rounded-full shadow-lg hover:bg-blue-700 transition duration-300 transform hover:scale-105 disabled:opacity-50">
+                GERAR ANÁLISE
+            </button>
+            <div id="loadingIndicator" class="mt-4 hidden text-primary-blue font-medium">
+                <div class="animate-spin inline-block w-5 h-5 border-4 border-t-transparent border-primary-blue rounded-full mr-2"></div>
+                Processando análise... (Isto pode demorar alguns segundos)
+            </div>
+            <p id="authStatus" class="mt-2 text-sm text-gray-500"></p>
+        </div>
+
+        <!-- Área de Resultado -->
+        <div id="analysisContainer" class="mt-10 pt-8 border-t border-gray-200">
+            <h2 class="text-2xl font-bold text-gray-800 mb-6 border-b pb-2">Resultado da Análise</h2>
+            <div id="analysisResult" class="bg-analysis-bg p-6 rounded-lg min-h-[150px] shadow-inner text-gray-800">
+                <p class="text-gray-500" id="initialMessage">O relatório gerado pelo seu motor de análise proprietário aparecerá aqui.</p>
+            </div>
+            <div id="errorDisplay" class="hidden mt-4 p-4 bg-red-100 text-red-700 border border-red-400 rounded"></div>
+            
+            <!-- NOVO: Botão de Impressão/Exportação -->
+            <div class="text-center mt-6">
+                <button id="printButton" onclick="printAnalysis()" class="hidden px-8 py-3 bg-green-600 text-white font-bold rounded-full shadow-lg hover:bg-green-700 transition duration-300 transform hover:scale-105">
+                    IMPRIMIR / EXPORTAR PDF
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Firebase Imports -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        
+        // Define variáveis globais no escopo da janela
+        window.app = null;
+        window.db = null;
+        window.auth = null;
+        window.userId = null;
+        
+        // Variáveis globais do ambiente (Canvas/Immersive)
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' && __firebase_config ? __firebase_config : '{}');
+        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+
+        // Função de inicialização
+        async function initializeFirebase() {
+            if (Object.keys(firebaseConfig).length === 0) {
+                console.error("Configuração do Firebase não fornecida. Apenas a API Gemini funcionará.");
+                document.getElementById('authStatus').textContent = "Aviso: Sem config do Firebase.";
+                return;
+            }
+
+            try {
+                // setLogLevel('debug'); // Descomente para depuração
+                window.app = initializeApp(firebaseConfig);
+                window.db = getFirestore(window.app);
+                window.auth = getAuth(window.app);
+                
+                let authMethod = "Anônima";
+
+                if (initialAuthToken) {
+                    await signInWithCustomToken(window.auth, initialAuthToken);
+                    authMethod = "Custom Token (Autenticado)";
+                } else {
+                    await signInAnonymously(window.auth);
+                }
+
+                onAuthStateChanged(window.auth, (user) => {
+                    if (user) {
+                        window.userId = user.uid;
+                        document.getElementById('authStatus').textContent = `Conectado (ID: ${window.userId.substring(0, 8)}...) via ${authMethod}.`;
+                    } else {
+                        document.getElementById('authStatus').textContent = "Desconectado. Tentando login anônimo...";
+                    }
+                });
+
+            } catch (error) {
+                console.error("Erro ao inicializar ou autenticar no Firebase:", error);
+                document.getElementById('authStatus').textContent = `Erro de Autenticação: ${error.message}`;
+            }
+        }
+
+        // Inicializa o Firebase ao carregar a página
+        window.onload = initializeFirebase;
+    </script>
+
+    <!-- JavaScript da Aplicação e Lógica da IA -->
+    <script>
+        // Endpoint e chave da API Gemini (mantida como string vazia para o Canvas fornecer em runtime)
+        const API_KEY = ""; 
+        const API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent";
+        const MAX_RETRIES = 5;
+
+        // Função de backoff exponencial para chamadas à API
+        async function fetchWithBackoff(url, options, retries = 0) {
+            try {
+                const response = await fetch(url, options);
+                
+                if (response.status === 429 && retries < MAX_RETRIES) {
+                    const delay = Math.pow(2, retries) * 1000 + Math.random() * 1000;
+                    console.warn(`Taxa limite atingida. Tentando novamente em ${Math.round(delay / 1000)}s...`);
+                    await new Promise(resolve => setTimeout(resolve, delay));
+                    return fetchWithBackoff(url, options, retries + 1);
+                }
+
+                if (!response.ok) {
+                    throw new Error(`Erro HTTP: ${response.status} ${response.statusText}`);
+                }
+
+                return response.json();
+            } catch (error) {
+                if (retries < MAX_RETRIES) {
+                    const delay = Math.pow(2, retries) * 1000 + Math.random() * 1000;
+                    console.warn(`Erro na requisição. Tentando novamente em ${Math.round(delay / 1000)}s...`, error);
+                    await new Promise(resolve => setTimeout(resolve, delay));
+                    return fetchWithBackoff(url, options, retries + 1);
+                }
+                throw new Error(`Falha na requisição da API após ${MAX_RETRIES} tentativas: ${error.message}`);
+            }
+        }
+
+        /**
+         * Constrói o Prompt Mestre injetando as diretrizes proprietárias do usuário.
+         * @param {string} proprietaryDirectives - Regras extraídas do NotebookLM.
+         * @param {string} clientData - DRE ou dados de conversa.
+         * @returns {string} O prompt completo para o LLM.
+         */
+        function buildMasterPrompt(proprietaryDirectives, clientData) {
+            const defaultDirectives = "Sua análise deve ser estruturada. Use Markdown para formatar o resultado. Use tabelas se necessário para resumir os dados e foque em recomendações acionáveis. Não mencione o NotebookLM ou qualquer fonte externa.";
+            
+            // O Template do Prompt Mestre (Adaptado da nossa discussão anterior)
+            const masterPromptTemplate = `
+                **Instrução Principal:** Você é um Analista Estratégico de Elite e atua como o motor proprietário de insights de uma consultoria de alto nível. Sua tarefa é analisar os dados do cliente fornecidos abaixo e gerar um relatório focado em estratégia e crescimento.
+
+                ### 1. Diretrizes Proprietárias (Base de Conhecimento Secreta)
+
+                CRÍTICO: Sua análise deve incorporar e priorizar os seguintes frameworks e diretrizes de análise de ponta:
+
+                ${proprietaryDirectives || defaultDirectives}
+
+                ### 2. Análise Técnica Padrão
+
+                Execute as seguintes análises técnicas nos dados do cliente:
+                * **Análise de Desempenho:** Se for um DRE, avalie a Margem Bruta, Margem Operacional (EBIT) e Margem Líquida. Se for uma transcrição, analise o sentimento (positivo, neutro, negativo) e o tópico principal (dor/reclamação).
+                * **Variação:** Identifique os pontos de maior alavancagem de custo/receita ou os pontos mais críticos/recorrentes nas conversas.
+
+                ### 3. Estrutura do Relatório de Saída
+
+                O relatório final deve ser entregue em **Português do Brasil**, claro, conciso e com foco estratégico. Use títulos Markdown (###) e listas de tópicos onde apropriado.
+
+                #### Relatório Executivo
+                1.  **Diagnóstico Rápido:** Resumo de 3 frases sobre a Saúde do Negócio/Sentimento (aplicado às suas diretrizes proprietárias).
+                2.  **Principais Descobertas e Insights (O Pulo do Gato):** Destaque três pontos críticos ou oportunidades que foram descobertos pela aplicação das suas Diretrizes Proprietárias.
+
+                #### Análise Detalhada
+                1.  **Destaques de Crescimento/Oportunidades:** Onde o cliente está forte ou onde há potencial de melhoria.
+                2.  **Pressões de Custo/Risco:** Onde a rentabilidade ou satisfação do cliente está sendo mais erodida.
+                3.  **Rentabilidade/Retorno:** Interpretação dos indicadores chave.
+
+                #### Recomendações Estratégicas
+                * Ofereça 3 a 5 ações acionáveis e estratégicas.
+
+                ---
+                **Dados do Cliente para Análise:**
+                ${clientData}
+                ---
+            `;
+            return masterPromptTemplate;
+        }
+
+        /**
+         * Função para imprimir o conteúdo da página, ideal para exportar para PDF.
+         */
+        function printAnalysis() {
+            window.print();
+        }
+
+        /**
+         * Função principal para gerar a análise ao clicar no botão.
+         */
+        async function generateAnalysis() {
+            const directives = document.getElementById('proprietaryDirectives').value.trim();
+            const clientData = document.getElementById('clientData').value.trim();
+            const resultDiv = document.getElementById('analysisResult');
+            const button = document.getElementById('generateButton');
+            const loadingIndicator = document.getElementById('loadingIndicator');
+            const errorDisplay = document.getElementById('errorDisplay');
+            const initialMessage = document.getElementById('initialMessage');
+            const printButton = document.getElementById('printButton'); // NOVO
+
+            errorDisplay.classList.add('hidden');
+            errorDisplay.textContent = '';
+            printButton.classList.add('hidden'); // Esconde o botão de impressão ao iniciar
+
+            if (!clientData) {
+                errorDisplay.textContent = 'Por favor, cole os Dados do Cliente (DRE ou Transcrição) para análise.';
+                errorDisplay.classList.remove('hidden');
+                return;
+            }
+
+            button.disabled = true;
+            initialMessage.classList.add('hidden');
+            resultDiv.innerHTML = '';
+            loadingIndicator.classList.remove('hidden');
+
+            const fullPrompt = buildMasterPrompt(directives, clientData);
+            
+            const payload = {
+                contents: [{ parts: [{ text: fullPrompt }] }],
+                // Não usamos grounding (google_search) para garantir que a resposta seja puramente baseada no prompt (o "pulo do gato")
+            };
+
+            const url = `${API_URL}?key=${API_KEY}`;
+            
+            try {
+                const result = await fetchWithBackoff(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                const candidate = result.candidates?.[0];
+
+                if (candidate && candidate.content?.parts?.[0]?.text) {
+                    const text = candidate.content.parts[0].text;
+                    // Renderiza o texto do Markdown diretamente no HTML
+                    resultDiv.innerHTML = marked.parse(text); 
+                    
+                    // Adicionar o rodapé solicitado
+                    resultDiv.innerHTML += '<p class="mt-4 pt-2 border-t border-gray-300 text-sm text-gray-700 font-semibold">DOCUMENTO GERADO PELA IA HYDRA ANALYTICS V1.3.6</p>';
+                    
+                    // Mostra o botão de impressão/exportação
+                    printButton.classList.remove('hidden'); 
+
+                } else {
+                    throw new Error("A API não retornou conteúdo válido.");
+                }
+
+            } catch (error) {
+                console.error("Erro durante a geração da análise:", error);
+                errorDisplay.textContent = `Erro ao gerar a análise: ${error.message}. Tente novamente e verifique o formato dos dados.`;
+                errorDisplay.classList.remove('hidden');
+            } finally {
+                button.disabled = false;
+                loadingIndicator.classList.add('hidden');
+            }
+        }
+
+        // --- Lógica para Leitura de Múltiplos Arquivos TXT (Nova Funcionalidade) ---
+        document.addEventListener('DOMContentLoaded', () => {
+            const fileInput = document.getElementById('proprietaryFileUpload');
+            const textarea = document.getElementById('proprietaryDirectives');
+
+            if (fileInput) {
+                fileInput.addEventListener('change', (event) => {
+                    const files = event.target.files;
+                    if (files.length === 0) return;
+
+                    const validFiles = Array.from(files).filter(file => file.type === 'text/plain' || file.name.toLowerCase().endsWith('.txt'));
+                    
+                    // Cria uma Promise para ler o conteúdo de cada arquivo
+                    const promises = validFiles.map(file => {
+                        return new Promise((resolve, reject) => {
+                            const reader = new FileReader();
+                            reader.onload = (e) => {
+                                resolve({ filename: file.name, content: e.target.result });
+                            };
+                            reader.onerror = reject;
+                            reader.readAsText(file);
+                        });
+                    });
+
+                    // Verifica e exibe aviso para arquivos inválidos
+                    const invalidCount = files.length - validFiles.length;
+                    const errorDisplay = document.getElementById('errorDisplay');
+                    if (invalidCount > 0) {
+                        errorDisplay.textContent = `Aviso: ${invalidCount} arquivo(s) não foram carregados porque não são do tipo .TXT.`;
+                        errorDisplay.classList.remove('hidden');
+                    } else {
+                        errorDisplay.classList.add('hidden');
+                    }
+                    
+                    if (validFiles.length === 0) return;
+                    
+                    // Espera que todas as leituras de arquivo terminem
+                    Promise.all(promises)
+                        .then(results => {
+                            let combinedContent = '';
+                            // Concatena o conteúdo, adicionando um separador claro para cada arquivo
+                            results.forEach(result => {
+                                combinedContent += `\n\n--- INÍCIO DO ARQUIVO: ${result.filename} ---\n\n`;
+                                combinedContent += result.content.trim();
+                                combinedContent += `\n\n--- FIM DO ARQUIVO: ${result.filename} ---\n\n`;
+                            });
+                            textarea.value = combinedContent.trim();
+                            console.log('Arquivos de diretrizes (.txt) carregados e combinados com sucesso!');
+                        })
+                        .catch(error => {
+                            console.error('Erro ao ler os arquivos de diretrizes:', error);
+                            errorDisplay.textContent = 'Erro ao ler um ou mais arquivos de diretrizes.';
+                            errorDisplay.classList.remove('hidden');
+                        });
+                });
+            }
+        });
+
+    </script>
+    <!-- Inclui Marked.js para converter o Markdown (retorno da IA) em HTML -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/4.0.12/marked.min.js"></script>
+</body>
+</html>
